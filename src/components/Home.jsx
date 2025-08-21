@@ -129,7 +129,7 @@ const Home = ({ onTrackSelect, setPlaylist }) => {
               id: 1,
               title: 'Tum Hi Ho',
               duration: '4:22',
-              audio: '/assets/audio/hindi/arijit-singh/tum-hi-ho.mp3',
+              audio: '/assets/audio/Hindi/arijit-singh/tumhiho.mp3',
               image: '/assets/images/albums/tum-hi-ho.jpg'
             },
             {

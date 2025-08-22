@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { FiHome, FiSearch, FiMusic, FiPlay, FiPause, FiSkipBack, FiSkipForward, FiShuffle, FiRepeat } from 'react-icons/fi';
 import Home from './components/Home';
@@ -5,6 +7,80 @@ import Search from './components/Search';
 import Library from './components/Library';
 import MusicPlayer from './components/MusicPlayer';
 import './App.css';
+
+class AudioController {
+  constructor() {
+    this.audio = new Audio();
+    this.isChangingTrack = false;
+    this.currentTrack = null;
+    this.isPlaying = false;
+    this.volume = 0.7;
+    
+    this.audio.volume = this.volume;
+  }
+
+  async setTrack(track, shouldPlay = false) {
+    this.isChangingTrack = true;
+    this.currentTrack = track;
+    
+    try {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+      this.audio.src = track.audio;
+      
+      await new Promise((resolve) => {
+        const handleCanPlay = () => {
+          this.audio.removeEventListener('canplay', handleCanPlay);
+          resolve();
+        };
+        this.audio.addEventListener('canplay', handleCanPlay);
+        this.audio.load();
+      });
+
+      this.isChangingTrack = false;
+      
+      if (shouldPlay) {
+        await this.play();
+      }
+    } catch (error) {
+      console.error('Error setting track:', error);
+      this.isPlaying = false;
+    }
+  }
+
+  async play() {
+    if (this.isChangingTrack) return;
+    
+    try {
+      await this.audio.play();
+      this.isPlaying = true;
+    } catch (error) {
+      console.error('Error playing:', error);
+      this.isPlaying = false;
+    }
+  }
+
+  pause() {
+    if (this.isChangingTrack) return;
+    
+    this.audio.pause();
+    this.isPlaying = false;
+  }
+
+  setVolume(volume) {
+    this.volume = volume;
+    this.audio.volume = volume;
+  }
+
+  seek(time) {
+    this.audio.currentTime = time;
+  }
+
+  cleanup() {
+    this.audio.pause();
+    this.audio.src = '';
+  }
+}
 
 function App() {
   const [currentTrack, setCurrentTrack] = useState(null);
@@ -14,69 +90,78 @@ function App() {
   const [volume, setVolume] = useState(0.7);
   const [playlist, setPlaylist] = useState([]);
   const [activeTab, setActiveTab] = useState('home');
-  const audioRef = useRef(null);
+  const audioControllerRef = useRef(new AudioController());
 
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(error => {
-          console.error('Error playing audio:', error);
-          setIsPlaying(false);
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying, currentTrack]);
+    const controller = audioControllerRef.current;
+    
+    // Update UI state when audio time updates
+    const handleTimeUpdate = () => {
+      setCurrentTime(controller.audio.currentTime);
+      setDuration(controller.audio.duration || 0);
+    };
+
+    // Update UI state when play state changes
+    const handlePlayStateChange = () => {
+      setIsPlaying(controller.isPlaying);
+    };
+
+    controller.audio.addEventListener('timeupdate', handleTimeUpdate);
+    controller.audio.addEventListener('play', handlePlayStateChange);
+    controller.audio.addEventListener('pause', handlePlayStateChange);
+    controller.audio.addEventListener('ended', handleNext);
+
+    return () => {
+      controller.audio.removeEventListener('timeupdate', handleTimeUpdate);
+      controller.audio.removeEventListener('play', handlePlayStateChange);
+      controller.audio.removeEventListener('pause', handlePlayStateChange);
+      controller.audio.removeEventListener('ended', handleNext);
+      controller.cleanup();
+    };
+  }, []);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
+    audioControllerRef.current.setVolume(volume);
   }, [volume]);
 
-  const handleTrackSelect = (track) => {
+  const handleTrackSelect = async (track) => {
     setCurrentTrack(track);
-    setIsPlaying(true);
+    await audioControllerRef.current.setTrack(track, true);
   };
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      setDuration(audioRef.current.duration);
+  const handlePlayPause = async () => {
+    const controller = audioControllerRef.current;
+    if (controller.isPlaying) {
+      controller.pause();
+    } else {
+      await controller.play();
     }
   };
 
   const handleSeek = (e) => {
-    const newTime = e.target.value;
+    const newTime = parseFloat(e.target.value);
     setCurrentTime(newTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
+    audioControllerRef.current.seek(newTime);
   };
 
   const handleVolumeChange = (e) => {
-    const newVolume = e.target.value;
+    const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
   };
 
   const handleNext = () => {
-    if (playlist.length > 0) {
-      const currentIndex = playlist.findIndex(track => track.id === currentTrack?.id);
+    if (playlist.length > 0 && currentTrack) {
+      const currentIndex = playlist.findIndex(track => track.id === currentTrack.id);
       const nextIndex = (currentIndex + 1) % playlist.length;
-      setCurrentTrack(playlist[nextIndex]);
+      handleTrackSelect(playlist[nextIndex]);
     }
   };
 
   const handlePrevious = () => {
-    if (playlist.length > 0) {
-      const currentIndex = playlist.findIndex(track => track.id === currentTrack?.id);
+    if (playlist.length > 0 && currentTrack) {
+      const currentIndex = playlist.findIndex(track => track.id === currentTrack.id);
       const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
-      setCurrentTrack(playlist[prevIndex]);
+      handleTrackSelect(playlist[prevIndex]);
     }
   };
 
@@ -116,12 +201,6 @@ function App() {
 
       {currentTrack && (
         <div className="player-container">
-          <audio
-            ref={audioRef}
-            src={currentTrack.audio}
-            onTimeUpdate={handleTimeUpdate}
-            onEnded={handleNext}
-          />
           <MusicPlayer
             currentTrack={currentTrack}
             isPlaying={isPlaying}
@@ -141,3 +220,4 @@ function App() {
 }
 
 export default App;
+

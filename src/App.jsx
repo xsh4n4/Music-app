@@ -26,7 +26,7 @@ class AudioController {
     try {
       this.audio.pause();
       this.audio.currentTime = 0;
-      this.audio.src = track.audio;
+      this.audio.src = track.audio || track.preview_url;
       
       await new Promise((resolve) => {
         const handleCanPlay = () => {
@@ -54,9 +54,11 @@ class AudioController {
     try {
       await this.audio.play();
       this.isPlaying = true;
+      return true;
     } catch (error) {
       console.error('Error playing:', error);
       this.isPlaying = false;
+      return false;
     }
   }
 
@@ -65,6 +67,7 @@ class AudioController {
     
     this.audio.pause();
     this.isPlaying = false;
+    return true;
   }
 
   setVolume(volume) {
@@ -95,13 +98,11 @@ function App() {
   useEffect(() => {
     const controller = audioControllerRef.current;
     
-    // Update UI state when audio time updates
     const handleTimeUpdate = () => {
       setCurrentTime(controller.audio.currentTime);
       setDuration(controller.audio.duration || 0);
     };
 
-    // Update UI state when play state changes
     const handlePlayStateChange = () => {
       setIsPlaying(controller.isPlaying);
     };
@@ -125,16 +126,36 @@ function App() {
   }, [volume]);
 
   const handleTrackSelect = async (track) => {
-    setCurrentTrack(track);
-    await audioControllerRef.current.setTrack(track, true);
+    // Format track to ensure it has all required properties
+    const formattedTrack = {
+      ...track,
+      // Ensure we have audio URL
+      audio: track.audio || track.preview_url,
+      // Ensure album object exists
+      album: track.album || { 
+        images: [{ 
+          url: track.image || 'https://via.placeholder.com/60' 
+        }] 
+      },
+      // Ensure artists array exists
+      artists: track.artists || [{ 
+        name: track.artist 
+      }]
+    };
+    
+    setCurrentTrack(formattedTrack);
+    await audioControllerRef.current.setTrack(formattedTrack, true);
+    setIsPlaying(true);
   };
 
   const handlePlayPause = async () => {
     const controller = audioControllerRef.current;
     if (controller.isPlaying) {
       controller.pause();
+      setIsPlaying(false);
     } else {
-      await controller.play();
+      const success = await controller.play();
+      setIsPlaying(success);
     }
   };
 
@@ -169,7 +190,7 @@ function App() {
     <div className="app">
       <div className="sidebar">
         <div className="logo">
-          <h1>Music App</h1>
+          <h1>Music Mania</h1>
         </div>
         <nav className="nav-menu">
           <button 
@@ -220,4 +241,3 @@ function App() {
 }
 
 export default App;
-

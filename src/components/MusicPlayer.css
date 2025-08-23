@@ -1,3 +1,46 @@
+/* MusicPlayer.css */
+.play-btn {
+  background: #1db954;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.play-btn:hover {
+  background: #1ed760;
+  transform: scale(1.05);
+}
+
+.play-btn:active {
+  transform: scale(0.95);
+}
+
+.play-btn svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.control-btn {
+  background: transparent;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.control-btn:hover {
+  color: white;
+}
+
+/* Rest of your CSS styles */
+
 .music-player {
     display: flex;
     align-items: center;

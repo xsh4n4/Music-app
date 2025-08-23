@@ -13,16 +13,16 @@ const Library = ({ onTrackSelect, setPlaylist }) => {
           title: 'Shape of You',
           artist: 'Ed Sheeran',
           duration: '3:53',
-          image: '/assets/images/albums/shape-of-you.jpg',
-          audio: '/assets/audio/english/ed-sheeran/shape-of-you.mp3'
+          image: '/assets/images/albums/english/ed-sheeran/shapeofyou.jpg',
+          audio: '/assets/audio/english/ed-sheeran/shapeofyou.mp3'
         },
         {
           id: 2,
           title: 'Tum Hi Ho',
           artist: 'Arijit Singh',
           duration: '4:22',
-          image: '/assets/images/albums/tum-hi-ho.jpg',
-          audio: '/assets/audio/hindi/arijit-singh/tum-hi-ho.mp3'
+          image: '/assets/images/albums/hindi/arijit-singh/tumhiho.jpg',
+          audio: '/assets/audio/hindi/arijit-singh/tumhiho.mp3'
         }
       ]
     }
